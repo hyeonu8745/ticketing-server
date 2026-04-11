@@ -1,0 +1,47 @@
+services:
+  ticketing-mysql:
+    image: mysql:8.0
+    container_name: ticketing-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=1234  # <--- 여기에 사용할 비밀번호를 적으세요!
+      - MYSQL_DATABASE=ticketing           # 초기 데이터베이스 이름
+    deploy:
+      resources:
+        limits:
+          memory: 1.5G
+        reservations:
+          memory: 1G
+    command:
+      - --innodb-buffer-pool-size=1G
+
+  ticketing-redis:
+    image: redis:alpine
+    container_name: ticketing-redis
+    ports:
+      - "6379:6379"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    # 명령어 형식을 조금 더 안정적인 방식으로 수정했습니다.
+    command: ["redis-server", "--maxmemory", "800mb", "--maxmemory-policy", "allkeys-lru"]
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    restart: always
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin # 초기 비밀번호입니다 (접속 후 변경 가능)
+    restart: always

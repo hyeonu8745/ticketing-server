@@ -33,4 +33,9 @@ public class Payment {
         this.status = status;
         this.paymentMethod = "MOCK_CARD";
     }
+
+    // Payment.java 내부에 추가
+    public void cancel() {
+        this.status = PaymentStatus.CANCELLED;
+    }
 }

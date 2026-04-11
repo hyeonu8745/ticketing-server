@@ -20,19 +20,42 @@ public class User {
     private String email;
 
     @Column(nullable = false)
-    private String password;
-
-    @Column(nullable = false)
     private String name;
 
+    @Column(nullable = false)
+    private String password;
+
     @Enumerated(EnumType.STRING)
-    private UserRole role; // ROLE_USER, ROLE_ADMIN
+    @Column(nullable = false)
+    private UserRole role;
+
+    // --- 추가된 부분 ---
+    @Column(nullable = false)
+    private Long point = 0L; // 기본값 0원
+
+    // 포인트 충전 메서드
+    public void chargePoint(Long amount) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("충전 금액은 0원보다 커야 합니다.");
+        }
+        this.point += amount;
+    }
+
+    // 포인트 차감 메서드
+    public void usePoint(Long amount) {
+        if (this.point < amount) {
+            throw new RuntimeException("잔액이 부족합니다. 현재 잔액: " + this.point);
+        }
+        this.point -= amount;
+    }
+    // ------------------
 
     @Builder
-    public User(String email, String password, String name, UserRole role) {
+    public User(String email, String name, String password, UserRole role, Long point) {
         this.email = email;
-        this.password = password;
         this.name = name;
-        this.role = role;
+        this.password = password;
+        this.role = role != null ? role : UserRole.ROLE_USER;
+        this.point = point != null ? point : 0L; // 초기 포인트 설정 가능
     }
 }

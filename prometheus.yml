@@ -1,0 +1,10 @@
+global:
+  scrape_interval: 15s # 15초마다 데이터 수집
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'spring-boot-app'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      # 🌟 대괄호와 따옴표, 쉼표 위치를 정확히 맞췄습니다.
+      - targets: ['host.docker.internal:8080', 'host.docker.internal:8081']
