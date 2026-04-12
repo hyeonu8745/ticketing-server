@@ -21,6 +21,7 @@ public class ReservationController {
     private final ReservationService reservationService;
     private final QueueService queueService;
 
+    // 1. 좌석 예매
     @PostMapping
     public ResponseEntity<String> reserveSeat(
             @RequestParam Long eventId,
@@ -45,6 +46,7 @@ public class ReservationController {
         }
     }
 
+    // 2. 내 예매 내역 조회
     @GetMapping
     public ResponseEntity<?> getMyReservations(Authentication authentication) {
         if (authentication == null) {
@@ -54,6 +56,7 @@ public class ReservationController {
         return ResponseEntity.ok(reservationService.getUserReservations(userId));
     }
 
+    // 3. 예매 취소
     @DeleteMapping("/{reservationId}")
     public ResponseEntity<String> cancelReservation(
             @PathVariable Long reservationId,
@@ -67,6 +70,21 @@ public class ReservationController {
         try {
             reservationService.cancelReservation(reservationId, userId);
             return ResponseEntity.ok("예약이 정상적으로 취소되었습니다.");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PutMapping("/{reservationId}/seats/{newSeatId}")
+    public ResponseEntity<String> changeSeat(
+            @PathVariable Long reservationId,
+            @PathVariable Long newSeatId,
+            Authentication authentication) {
+
+        Long userId = (Long) authentication.getPrincipal();
+        try {
+            reservationService.changeSeat(reservationId, newSeatId, userId);
+            return ResponseEntity.ok("좌석 변경 성공!");
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

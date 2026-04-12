@@ -26,8 +26,12 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Swagger 관련 허용 (기존)
+                        // 1. Swagger 관련 허용
                         .requestMatchers(
+                                "/",                  // 🌟 루트 경로 허용 (접속 확인용)
+                                "/error",             // 🌟 에러 페이지 허용
+                                "/favicon.ico",
+                                "/api/admin/**",// 브라우저 아이콘 허용
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
@@ -35,13 +39,11 @@ public class SecurityConfig {
                                 "/webjars/**"
                         ).permitAll()
 
-                        // 🌟 2. 모니터링(Actuator) 관련 경로 모두 허용
+                        // 2. 모니터링 및 기존 허용 경로
                         .requestMatchers("/actuator/**").permitAll()
-
-                        // 3. 기존 허용 경로
                         .requestMatchers(
                                 "/api/users/**",
-                                "/api/events"
+                                "/api/events/**"
                         ).permitAll()
 
                         // 나머지는 토큰 필요

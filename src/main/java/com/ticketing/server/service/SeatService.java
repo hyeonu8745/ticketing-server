@@ -20,7 +20,8 @@ public class SeatService {
                 .map(seat -> new SeatResponse(
                         seat.getId(),
                         seat.getSeatNumber(),
-                        seat.getStatus()
+                        seat.getStatus(),
+                        seat.getPrice()
                 ))
                 .toList();
     }

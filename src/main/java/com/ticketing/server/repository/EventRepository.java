@@ -8,4 +8,5 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     // 공연 시작 시간(startTime) 순으로 전체 목록을 가져옵니다.
     List<Event> findAllByOrderByStartTimeAsc();
+    boolean existsByKopisEventId(String kopisEventId);
 }

@@ -17,4 +17,6 @@ public interface SeatRepository extends JpaRepository<Seat, Long> {
 
     // 3. 특정 공연의 '예매 가능한(AVAILABLE)' 좌석만 가져오는 메서드 (필터링용)
     List<Seat> findAllByEventIdAndStatus(Long eventId, SeatStatus status);
+
+    long countByEventIdAndStatus(Long eventId, SeatStatus status); //
 }

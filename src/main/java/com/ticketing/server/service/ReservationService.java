@@ -185,6 +185,7 @@ public class ReservationService {
                 .stream()
                 .map(reservation -> new ReservationResponse(
                         reservation.getId(),
+                        reservation.getSeat().getEvent().getId(),
                         reservation.getSeat().getEvent().getTitle(),
                         reservation.getSeat().getSeatNumber(),
                         reservation.getSeat().getPrice(),

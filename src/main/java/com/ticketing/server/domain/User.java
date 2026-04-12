@@ -58,4 +58,11 @@ public class User {
         this.role = role != null ? role : UserRole.ROLE_USER;
         this.point = point != null ? point : 0L; // 초기 포인트 설정 가능
     }
+
+    public void updateName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("이름은 비어있을 수 없습니다.");
+        }
+        this.name = name;
+    }
 }

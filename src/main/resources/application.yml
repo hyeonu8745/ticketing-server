@@ -1,3 +1,9 @@
+server:
+  port: 8080 # (8081 서버라면 8081로 수정)
+  address: 0.0.0.0 # 🌟 핵심! 모든 네트워크(WSL 포함)의 요청을 받겠다는 뜻입니다.
+
+
+
 spring:
   datasource:
     # Docker로 띄운 MySQL 주소

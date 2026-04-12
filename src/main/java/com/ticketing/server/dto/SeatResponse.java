@@ -5,5 +5,6 @@ import com.ticketing.server.domain.SeatStatus;
 public record SeatResponse(
         Long id,
         String seatNumber,
-        SeatStatus status
+        SeatStatus status,
+        Long price
 ) {}
