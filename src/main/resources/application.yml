@@ -40,6 +40,9 @@ springdoc:
   packages-to-scan: com.ticketing.server.controller
 
 management:
+  metrics:
+    tags:
+      application: ticketing-server  # 👈 이 줄이 들어가야 그라파나가 인식합니다!
   endpoints:
     web:
       exposure:
