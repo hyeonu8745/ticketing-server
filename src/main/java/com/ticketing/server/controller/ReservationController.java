@@ -34,7 +34,17 @@ public class ReservationController {
 
         Long userId = (Long) authentication.getPrincipal();
 
-        if (!queueService.isAllowedToReserve(eventId, userId)) {
+        // 🌟 [수정] 성급한 봇들을 위한 재시도 로직 (최대 3번, 0.1초 간격)
+        boolean isAllowed = false;
+        for (int i = 0; i < 3; i++) {
+            if (queueService.isAllowedToReserve(eventId, userId)) {
+                isAllowed = true;
+                break;
+            }
+            try { Thread.sleep(100); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        }
+
+        if (!isAllowed) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("정상적인 대기열을 거치지 않았습니다.");
         }
 

@@ -3,8 +3,10 @@ package com.ticketing.server.scheduler;
 import com.ticketing.server.service.QueueService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RedissonClient;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import java.util.Set;
 
 @Slf4j
 @Component
@@ -12,25 +14,25 @@ import org.springframework.stereotype.Component;
 public class QueueScheduler {
 
     private final QueueService queueService;
+    private final RedissonClient redissonClient; // 키 검색을 위해 추가
 
-    /**
-     * 1초마다 대기열 상위 N명을 활성 상태(Active)로 전환합니다.
-     * fixedDelay = 1000은 작업이 끝난 후 1초 뒤에 다시 실행한다는 뜻입니다.
-     */
     @Scheduled(fixedDelay = 1000)
     public void processQueue() {
-        // 실제 운영 시에는 DB에서 현재 예매 진행 중인 이벤트 ID 리스트를 가져와서 반복문을 돌려야 하지만,
-        // 지금은 테스트를 위해 1번 이벤트(eventId = 1L)를 기준으로 고정해서 작성합니다.
-        Long eventId = 1L;
+        // 수정된 부분: Set 대신 Iterable을 사용하고, getKeysByPattern을 호출합니다.
+        Iterable<String> waitingKeys = redissonClient.getKeys().getKeysByPattern("queue:waiting:event:*");
 
-        // 한 번에 몇 명씩 입장시킬지 결정 (졸업 작품 발표 때 이 숫자를 바꿔가며 성능을 보여주기 좋습니다!)
-        int enterCount = 10;
+        int enterCount = 100; // 한 번에 입장시킬 인원
 
-        try {
-            queueService.letUsersEnter(eventId, enterCount);
-            // log.info("[SCHEDULER] 이벤트 {}의 대기열을 처리했습니다. ({}명 입장)", eventId, enterCount);
-        } catch (Exception e) {
-            log.error("[SCHEDULER_ERROR] 대기열 처리 중 오류 발생: {}", e.getMessage());
+        // Iterable도 Set처럼 for-each 문을 똑같이 사용할 수 있습니다.
+        for (String key : waitingKeys) {
+            try {
+                String[] parts = key.split(":");
+                Long eventId = Long.parseLong(parts[parts.length - 1]);
+
+                queueService.letUsersEnter(eventId, enterCount);
+            } catch (Exception e) {
+                log.error("[SCHEDULER_ERROR] 키 {} 처리 중 오류 발생: {}", key, e.getMessage());
+            }
         }
     }
 }

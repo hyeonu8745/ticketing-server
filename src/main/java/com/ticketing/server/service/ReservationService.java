@@ -76,7 +76,10 @@ public class ReservationService {
 
                     // 🌟 5. 예약 성공 후 대기열 퇴장 처리 (성공했으니 번호표 반납)
                     // QueueService에 퇴장 로직을 추가하거나 여기서 직접 Redis 삭제 가능
+                    queueService.exitActiveQueue(eventId, userId);
+
                     log.info("🎉 [RESERVE_SUCCESS] 유저 {}님 예약 완료! (대기열 종료)", userId);
+
                 } finally {
                     if (lock.isHeldByCurrentThread()) {
                         lock.unlock();
