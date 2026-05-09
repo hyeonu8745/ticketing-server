@@ -30,7 +30,7 @@ class UserDataInitTest {
     @Transactional
     @Rollback(false)
     void insertRemainingUsers() {
-        int startNum = 1001;  // 🌟 시작 번호 설정
+        int startNum = 1;  // 🌟 시작 번호 설정
         int targetNum = 10000; // 최종 목표 번호
 
         // 현재 DB에 있는 유저 수 확인
@@ -52,7 +52,7 @@ class UserDataInitTest {
                     .email("user" + i + "@test.com")
                     .name("테스트유저" + i)
                     .password(encodedPassword)
-                    .point(100000L) // 예매 테스트용 포인트 지급
+                    .point(1000000L) // 예매 테스트용 포인트 지급
                     .role(UserRole.ROLE_USER)
                     .build());
 

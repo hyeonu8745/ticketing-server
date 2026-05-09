@@ -4,6 +4,7 @@ import com.ticketing.server.service.KopisService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -13,10 +14,15 @@ public class AdminController {
 
     private final KopisService kopisService;
 
-    // 🚀 브라우저에서 이 주소를 치면 KOPIS 데이터가 우리 DB로 들어옵니다!
     @GetMapping("/sync")
-    public String syncData() {
-        kopisService.fetchAndSaveLargeEvents();
-        return "🎯 KOPIS 데이터 동기화 성공! 인텔리제이 로그를 확인하세요.";
+    public String syncData(@RequestParam(defaultValue = "100") int count) {
+        // 1. 기존 데이터 초기화 (필요 시)
+        // kopisService.deleteAllExistingData();
+
+        // 2. KOPIS 데이터 수집 호출 (count 만큼 가져옴)
+        // 🌟 수정된 포인트: 이제 count 인자를 전달합니다.
+        kopisService.fetchAndSaveLargeEvents(count);
+
+        return "🎯 KOPIS 데이터 " + count + "개 동기화 요청이 완료되었습니다!";
     }
 }
