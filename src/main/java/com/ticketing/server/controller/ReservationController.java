@@ -1,9 +1,14 @@
 package com.ticketing.server.controller;
 
+import com.ticketing.server.dto.BotDetectionRequest;
 import com.ticketing.server.dto.ReservationResponse;
+import com.ticketing.server.repository.ReservationRepository;
+import com.ticketing.server.repository.UserRepository;
+import com.ticketing.server.service.BotDetectionService;
 import com.ticketing.server.service.QueueService;
 import com.ticketing.server.service.ReservationFacade;
 import com.ticketing.server.service.ReservationService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,13 +25,21 @@ public class ReservationController {
     private final ReservationFacade reservationFacade;
     private final ReservationService reservationService;
     private final QueueService queueService;
+    private final BotDetectionService botDetectionService;  // 🌟 추가
+    private final UserRepository userRepository;            // 🌟 취소 횟수 조회용
+    private final ReservationRepository reservationRepository; // 🌟 성공 횟수 조회용
 
-    // 1. 좌석 예매
+    // ──────────────────────────────────────────────
+    // 1. 좌석 예매 (봇 탐지 통합)
+    // ──────────────────────────────────────────────
     @PostMapping
     public ResponseEntity<String> reserveSeat(
             @RequestParam Long eventId,
             @RequestParam Long seatId,
-            Authentication authentication) {
+            @RequestParam(defaultValue = "0") double queueWaitSeconds,    // 🌟 프론트에서 전달
+            @RequestParam(defaultValue = "true") boolean hasInteraction,  // 🌟 프론트에서 전달
+            Authentication authentication,
+            HttpServletRequest httpRequest) {                              // 🌟 IP 추출용
 
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("인증 정보가 없습니다.");
@@ -34,7 +47,34 @@ public class ReservationController {
 
         Long userId = (Long) authentication.getPrincipal();
 
-        // 🌟 [수정] 성급한 봇들을 위한 재시도 로직 (최대 3번, 0.1초 간격)
+        // ── 🌟 Step 1: GraphSAGE 봇 탐지 ──────────────────
+        String clientIp = getClientIp(httpRequest);
+        String userAgent = httpRequest.getHeader("User-Agent");
+
+        // 유저 취소/성공 횟수 조회 (간단히 DB에서)
+        int cancelCount = reservationRepository
+                .countByUserIdAndStatus(userId, com.ticketing.server.domain.ReservationStatus.CANCELLED);
+        int successCount = reservationRepository
+                .countByUserIdAndStatus(userId, com.ticketing.server.domain.ReservationStatus.CONFIRMED);
+
+        BotDetectionRequest botRequest = BotDetectionRequest.builder()
+                .userId(userId)
+                .eventId(eventId)
+                .ipAddress(clientIp)
+                .userAgent(userAgent != null ? userAgent : "unknown")
+                .queueWaitSeconds(queueWaitSeconds)
+                .hasInteraction(hasInteraction)
+                .cancelCount(cancelCount)
+                .successCount(successCount)
+                .build();
+
+        if (botDetectionService.isBot(botRequest)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("🚨 비정상적인 접근이 감지되었습니다. 잠시 후 다시 시도해주세요.");
+        }
+        // ── 봇 탐지 끝 ────────────────────────────────────
+
+        // ── Step 2: 대기열 검증 (기존 로직 유지) ──────────
         boolean isAllowed = false;
         for (int i = 0; i < 3; i++) {
             if (queueService.isAllowedToReserve(eventId, userId)) {
@@ -48,6 +88,7 @@ public class ReservationController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("정상적인 대기열을 거치지 않았습니다.");
         }
 
+        // ── Step 3: 실제 예매 처리 ─────────────────────────
         try {
             reservationFacade.reserveSeatWithLock(eventId, seatId, userId);
             return ResponseEntity.ok("🎉 예매 성공!");
@@ -56,7 +97,9 @@ public class ReservationController {
         }
     }
 
-    // 2. 내 예매 내역 조회
+    // ──────────────────────────────────────────────
+    // 2. 내 예매 내역 조회 (기존과 동일)
+    // ──────────────────────────────────────────────
     @GetMapping
     public ResponseEntity<?> getMyReservations(Authentication authentication) {
         if (authentication == null) {
@@ -66,7 +109,9 @@ public class ReservationController {
         return ResponseEntity.ok(reservationService.getUserReservations(userId));
     }
 
-    // 3. 예매 취소
+    // ──────────────────────────────────────────────
+    // 3. 예매 취소 (기존과 동일)
+    // ──────────────────────────────────────────────
     @DeleteMapping("/{reservationId}")
     public ResponseEntity<String> cancelReservation(
             @PathVariable Long reservationId,
@@ -85,6 +130,9 @@ public class ReservationController {
         }
     }
 
+    // ──────────────────────────────────────────────
+    // 4. 좌석 변경 (기존과 동일)
+    // ──────────────────────────────────────────────
     @PutMapping("/{reservationId}/seats/{newSeatId}")
     public ResponseEntity<String> changeSeat(
             @PathVariable Long reservationId,
@@ -98,5 +146,18 @@ public class ReservationController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    // ──────────────────────────────────────────────
+    // 유틸: 실제 클라이언트 IP 추출 (Proxy/LB 고려)
+    // ──────────────────────────────────────────────
+    private String getClientIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip != null && !ip.isBlank() && !"unknown".equalsIgnoreCase(ip)) {
+            return ip.split(",")[0].trim(); // 다중 프록시인 경우 첫 번째 IP
+        }
+        ip = request.getHeader("X-Real-IP");
+        if (ip != null && !ip.isBlank()) return ip;
+        return request.getRemoteAddr();
     }
 }

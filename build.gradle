@@ -61,6 +61,7 @@ dependencies {
     implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.2.0'
 
     implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml'
+
 }
 
 tasks.named('test') {
