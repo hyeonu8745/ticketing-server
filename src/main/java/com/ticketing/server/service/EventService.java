@@ -21,7 +21,7 @@ import java.util.*;
 public class EventService {
 
     private final EventRepository eventRepository;
-    private final SearchKeywordExpander keywordExpander; // ✅ 동의어 확장기 주입
+    private final SearchKeywordExpander keywordExpander;
 
     @Transactional(readOnly = true)
     public Page<EventResponse> getEventsPaging(String category, String keyword, Pageable pageable) {
@@ -32,7 +32,6 @@ public class EventService {
         Page<Event> eventPage;
 
         if (hasKeyword) {
-            // ✅ 키워드 동의어 확장 후 통합 검색
             List<String> expanded = keywordExpander.expand(keyword);
             eventPage = searchByExpandedKeywords(expanded, hasCategory ? category : null, pageable);
         } else if (hasCategory) {
@@ -44,10 +43,6 @@ public class EventService {
         return eventPage.map(this::convertToResponse);
     }
 
-    /**
-     * 확장된 동의어 리스트로 통합 검색.
-     * 같은 이벤트가 여러 키워드에 걸쳐 매칭될 수 있으므로 id 기준 중복 제거.
-     */
     private Page<Event> searchByExpandedKeywords(List<String> keywords, String category, Pageable pageable) {
         Set<Long> seenIds = new LinkedHashSet<>();
         List<Event> merged = new ArrayList<>();
@@ -58,22 +53,15 @@ public class EventService {
                     : eventRepository.findByKeywordAcrossFields(kw, pageable);
 
             for (Event ev : partial.getContent()) {
-                if (seenIds.add(ev.getId())) {
-                    merged.add(ev);
-                }
+                if (seenIds.add(ev.getId())) merged.add(ev);
             }
         }
 
-        // 페이지네이션 재구성 (in-memory) — 결과가 수십~수백 건 규모 가정
         int start = (int) pageable.getOffset();
         int end = Math.min(start + pageable.getPageSize(), merged.size());
+        if (start > merged.size()) return new PageImpl<>(List.of(), pageable, merged.size());
 
-        if (start > merged.size()) {
-            return new PageImpl<>(List.of(), pageable, merged.size());
-        }
-
-        List<Event> sliced = merged.subList(start, end);
-        return new PageImpl<>(sliced, pageable, merged.size());
+        return new PageImpl<>(merged.subList(start, end), pageable, merged.size());
     }
 
     @Transactional(readOnly = true)
@@ -103,7 +91,8 @@ public class EventService {
                 .id(event.getId())
                 .title(event.getTitle())
                 .location(event.getLocation())
-                .posterUrl(event.getPosterUrl())
+                // 🌟 http 이미지를 백엔드 프록시 경유로 변환
+                .posterUrl(toProxyUrl(event.getPosterUrl()))
                 .startTime(event.getStartTime())
                 .totalSeats(event.getTotalSeats())
                 .remainingSeats(event.getSeats().stream()
@@ -112,5 +101,17 @@ public class EventService {
                 .description(event.getDescription())
                 .priceRange(priceRange)
                 .build();
+    }
+
+    /**
+     * KOPIS http 이미지 URL → 백엔드 프록시 URL 변환
+     * 클라우드플레어 mixed content 차단 우회
+     */
+    private String toProxyUrl(String originalUrl) {
+        if (originalUrl == null || originalUrl.isBlank()) return originalUrl;
+        if (originalUrl.startsWith("http://")) {
+            return "/api/proxy/image?url=" + originalUrl;
+        }
+        return originalUrl; // 이미 https면 그대로
     }
 }

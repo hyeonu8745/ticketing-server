@@ -50,6 +50,7 @@ public class SecurityConfig {
                                 "/api/events/**",
                                 "/api/reservations/**"
                         ).permitAll()
+                        .requestMatchers("/api/proxy/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
