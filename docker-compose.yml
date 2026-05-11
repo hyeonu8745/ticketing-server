@@ -7,7 +7,6 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=1234
       - MYSQL_DATABASE=ticketing
-    # [추가] DB 데이터가 실제 하드디스크에 저장되도록 설정
     volumes:
       - ./mysql_data:/var/lib/mysql
     deploy:
@@ -25,7 +24,6 @@ services:
     container_name: ticketing-redis
     ports:
       - "6379:6379"
-    # [추가] 레디스 데이터를 보존하기 위한 볼륨 설정
     volumes:
       - ./redis_data:/data
     deploy:
@@ -40,7 +38,6 @@ services:
     container_name: prometheus
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      # [추가] 수집한 메트릭 데이터가 사라지지 않게 보존
       - ./prometheus_data:/prometheus
     ports:
       - "9090:9090"
@@ -51,9 +48,29 @@ services:
     container_name: grafana
     ports:
       - "3000:3000"
-    # [추가] 제작한 대시보드와 설정이 저장되도록 설정
     volumes:
       - ./grafana_data:/var/lib/grafana
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     restart: always
+
+  # ── Ollama (LLM 모델 서버) ─────────────────────
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: always
+  # ───────────────────────────────────────────────
+
+volumes:
+  ollama_data:
