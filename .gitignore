@@ -36,3 +36,9 @@ out/
 ### VS Code ###
 .vscode/
 .env
+### Docker volumes ###
+grafana_data/
+mysql_data/
+redis_data/
+prometheus_data/
+ollama_data/
