@@ -51,7 +51,7 @@ src/main/java/com/ticketing/server/
 ### 🤖 AI 마이크로서비스 연동
 - 봇 탐지 / 개인화 추천 / 수요 예측 / 챗봇 서버와 RestTemplate으로 통신
 - 모든 AI 서버는 **Fail-Open** 전략 적용 (AI 서버 장애 시 메인 서비스 중단 없음)
-- AI 서버 레포지토리 → [DEAR TICKET AI](링크)
+- AI 서버 레포지토리 → [DEAR TICKET AI](https://github.com/hyeonu8745/ticketing-ai)
 
 ### 📊 모니터링
 - Spring Boot Actuator → `/actuator/prometheus` 메트릭 노출
@@ -128,3 +128,10 @@ http://localhost:8080/swagger-ui/index.html
 ## 📦 References
 
 - [KOPIS 공연예술통합전산망](https://www.kopis.or.kr) — 공연 데이터 제공
+
+---
+
+## 🔗 관련 레포지토리
+
+- 프론트엔드: [DEAR TICKET Frontend](https://github.com/hyeonu8745/ticketing-frontend)
+- AI 서버: [DEAR TICKET AI](https://github.com/hyeonu8745/ticketing-ai)
