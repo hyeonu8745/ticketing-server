@@ -1,7 +1,7 @@
 # 🎫 DEAR TICKET — Backend
 
 > 고가용성 아키텍처 기반의 실시간 티켓팅 시스템  
-> Spring Boot + Redis 분산 락 + AI 마이크로서비스
+> Spring Boot + Redis 분산 락
 
 ---
 
@@ -14,7 +14,6 @@
 | Security | Spring Security + JWT |
 | Database | MySQL 8.0 |
 | Cache / 분산 락 | Redis 7 + Redisson |
-| AI 서버 | FastAPI (Python) |
 | 모니터링 | Prometheus + Grafana |
 | 인프라 | Docker, Docker Compose |
 | API 문서 | SpringDoc OpenAPI (Swagger) |
@@ -32,12 +31,6 @@ src/main/java/com/ticketing/server/
 ├── repository/      # Spring Data JPA 레포지토리
 ├── service/         # 비즈니스 로직
 └── TicketingServerApplication.java
-
-# AI 마이크로서비스 (Python / FastAPI)
-bot_detection_server.py   # 봇 탐지 (port 8000)
-recommendation_server.py  # 개인화 추천 (port 8001)
-demand_forecast_server.py # 수요 예측 (port 8002)
-chatbot_server.py         # 고객센터 챗봇 (port 8003)
 ```
 
 ---
@@ -55,15 +48,10 @@ chatbot_server.py         # 고객센터 챗봇 (port 8003)
 - 포인트 결제 및 환불 처리
 - 예매 취소 시 소프트 딜리트(soft delete)
 
-### 🤖 AI 마이크로서비스 (FastAPI)
-| 서버 | 모델 | 설명 |
-|------|------|------|
-| 봇 탐지 | GraphSAGE (PyTorch) | 8차원 피처 기반 실시간 봇 스코어 산출, 임계값 0.7 이상 차단 |
-| 개인화 추천 | RALLRec (TF-IDF + 코사인 유사도) | 예매 내역 기반 유사 공연 추천, cold-start 처리 |
-| 수요 예측 | Lag-Llama (시계열) | 향후 12시간 혼잡도 예측 및 매진 일시 산출 |
-| 챗봇 | 키워드 매칭 + 바로가기 | 고객센터 플로팅 챗봇 |
-
+### 🤖 AI 마이크로서비스 연동
+- 봇 탐지 / 개인화 추천 / 수요 예측 / 챗봇 서버와 RestTemplate으로 통신
 - 모든 AI 서버는 **Fail-Open** 전략 적용 (AI 서버 장애 시 메인 서비스 중단 없음)
+- AI 서버 레포지토리 → [DEAR TICKET AI](링크)
 
 ### 📊 모니터링
 - Spring Boot Actuator → `/actuator/prometheus` 메트릭 노출
@@ -94,18 +82,7 @@ docker-compose up -d
 
 MySQL(3306), Redis(6379), Prometheus(9090), Grafana(3000) 컨테이너가 실행됩니다.
 
-### 3. AI 마이크로서비스 실행
-
-```bash
-pip install -r requirements.txt
-
-python bot_detection_server.py    # port 8000
-python recommendation_server.py   # port 8001
-python demand_forecast_server.py  # port 8002
-python chatbot_server.py          # port 8003
-```
-
-### 4. Spring Boot 실행
+### 3. Spring Boot 실행
 
 IntelliJ에서 `TicketingServerApplication` 실행  
 (Run Configuration → Environment Variables에 `.env` 파일 연결)
@@ -140,12 +117,7 @@ http://localhost:8080/swagger-ui/index.html
     │
     ▼
 [Spring Boot :8080]  ←──→  [MySQL :3306]
-    │                ←──→  [Redis :6379]
-    │
-    ├──→ [Bot Detection FastAPI :8000]
-    ├──→ [Recommendation FastAPI :8001]
-    ├──→ [Demand Forecast FastAPI :8002]
-    └──→ [Chatbot FastAPI :8003]
+                     ←──→  [Redis :6379]
 
 [Prometheus :9090] ←── scrape ── [Spring Boot Actuator]
 [Grafana :3000]    ←── query  ── [Prometheus]
@@ -156,6 +128,3 @@ http://localhost:8080/swagger-ui/index.html
 ## 📦 References
 
 - [KOPIS 공연예술통합전산망](https://www.kopis.or.kr) — 공연 데이터 제공
-- Hamilton et al. (2017) — GraphSAGE. NeurIPS 2017.
-- Yao et al. (2023) — RALLRec. arXiv:2312.02445
-- Rasul et al. (2024) — Lag-Llama. arXiv:2310.08278
