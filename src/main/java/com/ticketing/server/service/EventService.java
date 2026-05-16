@@ -37,7 +37,7 @@ public class EventService {
         } else if (hasCategory) {
             eventPage = eventRepository.findByCategoryName(category, pageable);
         } else {
-            eventPage = eventRepository.findAll(pageable);
+            eventPage = eventRepository.findAllByVisibleTrue(pageable);
         }
 
         return eventPage.map(this::convertToResponse);
@@ -68,6 +68,9 @@ public class EventService {
     public EventResponse getEventById(Long id) {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 공연입니다."));
+        if (!event.isVisible()) {
+           throw new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 공연입니다.");
+        }
         return convertToResponse(event);
     }
 

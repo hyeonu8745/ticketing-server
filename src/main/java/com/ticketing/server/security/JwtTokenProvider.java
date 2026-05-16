@@ -17,7 +17,6 @@ public class JwtTokenProvider {
     private final Key key;
     private final long tokenExpiration;
 
-    // yml 파일에서 설정한 비밀키와 만료 시간을 가져옵니다.
     public JwtTokenProvider(@Value("${jwt.secret}") String secretKey,
                             @Value("${jwt.expiration}") long tokenExpiration) {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
@@ -25,25 +24,23 @@ public class JwtTokenProvider {
         this.tokenExpiration = tokenExpiration;
     }
 
-    // 1. JWT 토큰 생성 메서드
     public String createToken(Long userId, String role) {
         Date now = new Date();
         Date validity = new Date(now.getTime() + this.tokenExpiration);
 
         return Jwts.builder()
-                .setSubject(userId.toString()) // 토큰의 주인을 userId로 설정
-                .claim("role", role)           // 권한 정보(USER, ADMIN) 추가
-                .setIssuedAt(now)              // 발행 시간
-                .setExpiration(validity)       // 만료 시간
-                .signWith(key, SignatureAlgorithm.HS256) // 암호화 알고리즘
+                .setSubject(userId.toString())
+                .claim("role", role)
+                .setIssuedAt(now)
+                .setExpiration(validity)
+                .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    // 2. JWT 토큰 유효성 검증 메서드
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
-            return true; // 문제없이 풀리면 정상 토큰!
+            return true;
         } catch (io.jsonwebtoken.security.SecurityException | MalformedJwtException e) {
             log.warn("잘못된 JWT 서명입니다.");
         } catch (ExpiredJwtException e) {
@@ -56,14 +53,22 @@ public class JwtTokenProvider {
         return false;
     }
 
-    // 3. 토큰에서 UserId 꺼내기 (나중에 예매할 때 "누가 예매했는지" 알아내기 위함)
     public Long getUserIdFromToken(String token) {
         Claims claims = Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-
         return Long.parseLong(claims.getSubject());
+    }
+
+    // 🌟 신규 추가: 토큰에서 role(ROLE_USER / ROLE_ADMIN) 추출
+    public String getRoleFromToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        return claims.get("role", String.class);
     }
 }

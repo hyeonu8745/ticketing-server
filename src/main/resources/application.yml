@@ -79,3 +79,10 @@ management:
           waitDurationInOpenState: 10000 # 10초 동안 차단 후 다시 시도
           permittedNumberOfCallsInHalfOpenState: 3
 
+  admin:
+    email: admin@dearticket.com
+    name: 관리자
+    password: ${ADMIN_PASSWORD:dearticket!admin1234}
+
+  kopis:
+    api-key: ${KOPIS_API_KEY}

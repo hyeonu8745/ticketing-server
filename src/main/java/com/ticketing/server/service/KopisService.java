@@ -5,6 +5,7 @@ import com.ticketing.server.dto.*;
 import com.ticketing.server.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -25,7 +26,9 @@ public class KopisService {
     private final EventRepository eventRepository;
     private final SeatRepository seatRepository;
     private final CategoryRepository categoryRepository;
-    private final String KOPIS_API_KEY = "4c8b614b6c924e0cbe899bf85c6c4045";
+
+    @Value("${kopis.api-key}")
+    private String KOPIS_API_KEY;
 
     public void fetchAndSaveLargeEvents(int count) {
         // 1. 날짜 설정 (오늘부터 2026년 말까지)

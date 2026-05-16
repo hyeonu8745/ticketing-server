@@ -65,4 +65,12 @@ public class User {
         }
         this.name = name;
     }
+
+    // 🌟 관리자: 권한 변경
+    public void changeRole(UserRole newRole) {
+        if (newRole == null) {
+            throw new IllegalArgumentException("권한값이 비어있습니다.");
+        }
+        this.role = newRole;
+    }
 }

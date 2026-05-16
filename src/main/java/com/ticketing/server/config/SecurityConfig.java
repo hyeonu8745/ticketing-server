@@ -27,17 +27,16 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // 1. CORS 설정 추가 (필수!)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
+                        // 공용 리소스
                         .requestMatchers(
                                 "/",
                                 "/error",
                                 "/favicon.ico",
-                                "/api/admin/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
@@ -45,10 +44,16 @@ public class SecurityConfig {
                                 "/webjars/**"
                         ).permitAll()
                         .requestMatchers("/actuator/**").permitAll()
+
+                        // 🌟 관리자 전용 — ROLE_ADMIN 만 접근 가능
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+                        // 사용자 일반 API (컨트롤러에서 Authentication null 체크로 권한 처리)
                         .requestMatchers(
                                 "/api/users/**",
                                 "/api/events/**",
-                                "/api/reservations/**"
+                                "/api/reservations/**",
+                                "/api/reviews/**"          // 🌟 후기 API
                         ).permitAll()
                         .requestMatchers("/api/proxy/**").permitAll()
                         .requestMatchers("/api/chat/**").permitAll()
@@ -59,18 +64,16 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // 2. CORS 상세 설정 Bean 추가
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 🌟 .setAllowedOrigins 대신 Pattern을 쓰면 더 확실합니다.
         configuration.setAllowedOriginPatterns(Arrays.asList(
                 "http://localhost:3001",
-                "https://*.jihyeonu.com", // 모든 서브도메인 허용
+                "https://*.jihyeonu.com",
                 "https://jihyeonu.com"
         ));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Cache-Control"));
         configuration.setAllowCredentials(true);
 

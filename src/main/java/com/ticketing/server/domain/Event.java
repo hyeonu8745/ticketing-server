@@ -31,8 +31,11 @@ public class Event {
     private String cast;
     private String kopisEventId;
 
-    // 🌟 누락되었던 총 좌석 수 필드 복구!
     private int totalSeats;
+
+    // 🌟 신규: soft hide. 기본값 true. false면 일반 사용자에게 안 보임.
+    @Column(nullable = false)
+    private boolean visible = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
@@ -44,7 +47,7 @@ public class Event {
     @Builder
     public Event(String title, String location, String posterUrl, LocalDateTime startTime,
                  String playTime, String description, String runtime, String rating,
-                 String cast, Category category, String kopisEventId, int totalSeats) { // 🌟 생성자 파라미터 추가
+                 String cast, Category category, String kopisEventId, int totalSeats) {
         this.title = title;
         this.location = location;
         this.posterUrl = posterUrl;
@@ -56,6 +59,18 @@ public class Event {
         this.cast = cast;
         this.category = category;
         this.kopisEventId = kopisEventId;
-        this.totalSeats = totalSeats; // 🌟 할당
+        this.totalSeats = totalSeats;
+        this.visible = true;
+    }
+
+    // 🌟 관리자: 공연 숨기기 / 다시 표시
+    public void hide() { this.visible = false; }
+    public void show() { this.visible = true; }
+
+    // 🌟 관리자: 기본 정보 수정
+    public void updateInfo(String title, String location, String description) {
+        if (title != null && !title.isBlank()) this.title = title;
+        if (location != null && !location.isBlank()) this.location = location;
+        if (description != null) this.description = description;
     }
 }
