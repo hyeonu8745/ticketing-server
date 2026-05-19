@@ -1,11 +1,13 @@
-# 🎫 DEAR TICKET — Backend
+# DEAR TICKET — Backend
 
-> 고가용성 아키텍처 기반의 실시간 티켓팅 시스템  
+![CI](https://github.com/hyeonu8745/ticketing-server/actions/workflows/ci.yml/badge.svg)
+
+> 고가용성 아키텍처 기반의 실시간 티켓팅 시스템
 > Spring Boot + Redis 분산 락
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 | 분류 | 기술 |
 |------|------|
@@ -17,10 +19,11 @@
 | 모니터링 | Prometheus + Grafana |
 | 인프라 | Docker, Docker Compose |
 | API 문서 | SpringDoc OpenAPI (Swagger) |
+| CI/CD | GitHub Actions |
 
 ---
 
-## 📁 프로젝트 구조
+## 프로젝트 구조
 
 ```
 src/main/java/com/ticketing/server/
@@ -35,36 +38,37 @@ src/main/java/com/ticketing/server/
 
 ---
 
-## ✨ 주요 기능
+## 주요 기능
 
-### 🔐 인증 / 인가
+### 인증 / 인가
 - JWT 기반 Stateless 인증
-- `ROLE_USER` / `ROLE_ADMIN` 권한 분리
+- ROLE_USER / ROLE_ADMIN 권한 분리
 - 서버 기동 시 관리자 계정 자동 생성
 
-### 🎟 예매 & 동시성 제어
+### 예매 & 동시성 제어
 - Redisson 분산 락(Distributed Lock)으로 중복 예매 완전 방지
+- ReservationFacade 패턴으로 락 로직 단일화
 - Redis 기반 실시간 대기열(Queue) 시스템
 - 포인트 결제 및 환불 처리
 - 예매 취소 시 소프트 딜리트(soft delete)
 
-### 🤖 AI 마이크로서비스 연동
+### AI 마이크로서비스 연동
 - 봇 탐지 / 개인화 추천 / 수요 예측 / 챗봇 서버와 RestTemplate으로 통신
-- 모든 AI 서버는 **Fail-Open** 전략 적용 (AI 서버 장애 시 메인 서비스 중단 없음)
+- 모든 AI 서버는 Fail-Open 전략 적용 (AI 서버 장애 시 메인 서비스 중단 없음)
 - AI 서버 레포지토리 → [DEAR TICKET AI](https://github.com/hyeonu8745/ticketing-ai)
 
-### 📊 모니터링
+### 모니터링
 - Spring Boot Actuator → `/actuator/prometheus` 메트릭 노출
 - Prometheus 15초 주기 수집
 - Grafana 대시보드: JVM 메모리, HTTP 요청율, 응답 지연 p95/p99, Tomcat 스레드
 
-### 🎭 공연 데이터
+### 공연 데이터
 - KOPIS 공연예술통합전산망 API 연동
 - 관리자 콘솔에서 원하는 건수만큼 동기화 가능
 
 ---
 
-## 🚀 실행 방법
+## 실행 방법
 
 ### 1. 환경변수 설정
 
@@ -84,12 +88,12 @@ MySQL(3306), Redis(6379), Prometheus(9090), Grafana(3000) 컨테이너가 실행
 
 ### 3. Spring Boot 실행
 
-IntelliJ에서 `TicketingServerApplication` 실행  
+IntelliJ에서 `TicketingServerApplication` 실행
 (Run Configuration → Environment Variables에 `.env` 파일 연결)
 
 ---
 
-## ⚙️ 주요 설정 (application.yml)
+## 주요 설정 (application.yml)
 
 | 항목 | 값 |
 |------|-----|
@@ -100,7 +104,7 @@ IntelliJ에서 `TicketingServerApplication` 실행
 
 ---
 
-## 📡 API 문서
+## API 문서
 
 서버 실행 후 아래 주소에서 Swagger UI 확인:
 
@@ -110,7 +114,7 @@ http://localhost:8080/swagger-ui/index.html
 
 ---
 
-## 🗄 인프라 구성
+## 인프라 구성
 
 ```
 [Client]
@@ -125,13 +129,13 @@ http://localhost:8080/swagger-ui/index.html
 
 ---
 
-## 📦 References
-
-- [KOPIS 공연예술통합전산망](https://www.kopis.or.kr) — 공연 데이터 제공
-
----
-
-## 🔗 관련 레포지토리
+## 관련 레포지토리
 
 - 프론트엔드: [DEAR TICKET Frontend](https://github.com/hyeonu8745/ticketing-frontend)
 - AI 서버: [DEAR TICKET AI](https://github.com/hyeonu8745/ticketing-ai)
+
+---
+
+## References
+
+- [KOPIS 공연예술통합전산망](https://www.kopis.or.kr) — 공연 데이터 제공
