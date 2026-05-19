@@ -2,7 +2,7 @@ package com.ticketing.server.service;
 
 import com.ticketing.server.domain.*;
 import com.ticketing.server.dto.ReservationResponse;
-import com.ticketing.server.repository.PaymentRepository; // 추가
+import com.ticketing.server.repository.PaymentRepository;
 import com.ticketing.server.repository.ReservationRepository;
 import com.ticketing.server.repository.SeatRepository;
 import com.ticketing.server.repository.UserRepository;
@@ -30,68 +30,52 @@ public class ReservationService {
     private final PaymentRepository paymentRepository;
     private final QueueService queueService;
 
+    /**
+     * 좌석 예매 핵심 로직.
+     * 분산 락은 ReservationFacade에서 처리하므로 이 메서드는 락이 이미 획득된 상태에서 호출된다.
+     */
     @Transactional
     public void reserveSeat(Long eventId, Long seatId, Long userId) {
 
-        // 🌟 2. 대기열 검문 (입구 컷)
+        // 대기열 검문 (입구 컷)
         if (!queueService.isAllowedToReserve(eventId, userId)) {
             log.warn("[RESERVE_REJECTED] 대기열 미통과 유저. UserId: {}, EventId: {}", userId, eventId);
             throw new RuntimeException("아직 예매 순서가 아닙니다. 대기열을 확인해주세요.");
         }
 
-        String lockKey = "lock:seat:" + seatId;
-        RLock lock = redissonClient.getLock(lockKey);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        Seat seat = seatRepository.findById(seatId)
+                .orElseThrow(() -> new RuntimeException("좌석을 찾을 수 없습니다."));
 
-        try {
-            if (lock.tryLock(5, 2, TimeUnit.SECONDS)) {
-                try {
-                    User user = userRepository.findById(userId)
-                            .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
-                    Seat seat = seatRepository.findById(seatId)
-                            .orElseThrow(() -> new RuntimeException("좌석을 찾을 수 없습니다."));
-
-                    if (seat.getStatus() == SeatStatus.RESERVED) {
-                        throw new RuntimeException("이미 예약된 좌석입니다.");
-                    }
-
-                    // 2. 포인트 결제 및 좌석 예약
-                    user.usePoint(seat.getPrice());
-                    seat.reserve();
-
-                    // 3. 예약 데이터 생성 및 저장
-                    Reservation reservation = Reservation.builder()
-                            .user(user)
-                            .seat(seat)
-                            .reservedAt(LocalDateTime.now())
-                            .build();
-                    reservationRepository.save(reservation);
-
-                    // 🌟 4. 결제 이력(Payment) 생성 및 저장
-                    Payment payment = Payment.builder()
-                            .reservation(reservation)
-                            .amount(seat.getPrice())
-                            .status(PaymentStatus.COMPLETED)
-                            .build();
-                    paymentRepository.save(payment);
-
-                    // 🌟 5. 예약 성공 후 대기열 퇴장 처리 (성공했으니 번호표 반납)
-                    // QueueService에 퇴장 로직을 추가하거나 여기서 직접 Redis 삭제 가능
-                    queueService.exitActiveQueue(eventId, userId);
-
-                    log.info("🎉 [RESERVE_SUCCESS] 유저 {}님 예약 완료! (대기열 종료)", userId);
-
-                } finally {
-                    if (lock.isHeldByCurrentThread()) {
-                        lock.unlock();
-                    }
-                }
-            } else {
-                throw new RuntimeException("잠시 후 다시 시도해주세요. (락 획득 실패)");
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("예약 중 오류가 발생했습니다.");
+        if (seat.getStatus() == SeatStatus.RESERVED) {
+            throw new RuntimeException("이미 예약된 좌석입니다.");
         }
+
+        // 포인트 결제 및 좌석 예약
+        user.usePoint(seat.getPrice());
+        seat.reserve();
+
+        // 예약 데이터 생성 및 저장
+        Reservation reservation = Reservation.builder()
+                .user(user)
+                .seat(seat)
+                .reservedAt(LocalDateTime.now())
+                .build();
+        reservationRepository.save(reservation);
+
+        // 결제 이력(Payment) 생성 및 저장
+        Payment payment = Payment.builder()
+                .reservation(reservation)
+                .amount(seat.getPrice())
+                .status(PaymentStatus.COMPLETED)
+                .build();
+        paymentRepository.save(payment);
+
+        // 예약 성공 후 대기열 퇴장 처리
+        queueService.exitActiveQueue(eventId, userId);
+
+        log.info("🎉 [RESERVE_SUCCESS] 유저 {}님 예약 완료! (대기열 종료)", userId);
     }
 
     /**
@@ -195,6 +179,22 @@ public class ReservationService {
                         reservation.getReservedAt()
                 ))
                 .toList();
+    }
+
+    /**
+     * 봇 탐지용 — 유저의 취소 횟수 조회
+     */
+    @Transactional(readOnly = true)
+    public int countCancelledByUser(Long userId) {
+        return reservationRepository.countByUserIdAndStatus(userId, ReservationStatus.CANCELLED);
+    }
+
+    /**
+     * 봇 탐지용 — 유저의 성공 예매 횟수 조회
+     */
+    @Transactional(readOnly = true)
+    public int countConfirmedByUser(Long userId) {
+        return reservationRepository.countByUserIdAndStatus(userId, ReservationStatus.CONFIRMED);
     }
 
     // 🌟 서킷 브레이커 적용! 이름은 yml에서 정한 ticketingService

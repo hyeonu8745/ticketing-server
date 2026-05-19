@@ -1,9 +1,6 @@
 package com.ticketing.server.controller;
 
 import com.ticketing.server.dto.BotDetectionRequest;
-import com.ticketing.server.dto.ReservationResponse;
-import com.ticketing.server.repository.ReservationRepository;
-import com.ticketing.server.repository.UserRepository;
 import com.ticketing.server.service.BotDetectionService;
 import com.ticketing.server.service.QueueService;
 import com.ticketing.server.service.ReservationFacade;
@@ -15,8 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/reservations")
 @RequiredArgsConstructor
@@ -25,9 +20,7 @@ public class ReservationController {
     private final ReservationFacade reservationFacade;
     private final ReservationService reservationService;
     private final QueueService queueService;
-    private final BotDetectionService botDetectionService;  // 🌟 추가
-    private final UserRepository userRepository;            // 🌟 취소 횟수 조회용
-    private final ReservationRepository reservationRepository; // 🌟 성공 횟수 조회용
+    private final BotDetectionService botDetectionService;
 
     // ──────────────────────────────────────────────
     // 1. 좌석 예매 (봇 탐지 통합)
@@ -36,10 +29,10 @@ public class ReservationController {
     public ResponseEntity<String> reserveSeat(
             @RequestParam Long eventId,
             @RequestParam Long seatId,
-            @RequestParam(defaultValue = "0") double queueWaitSeconds,    // 🌟 프론트에서 전달
-            @RequestParam(defaultValue = "true") boolean hasInteraction,  // 🌟 프론트에서 전달
+            @RequestParam(defaultValue = "0") double queueWaitSeconds,
+            @RequestParam(defaultValue = "true") boolean hasInteraction,
             Authentication authentication,
-            HttpServletRequest httpRequest) {                              // 🌟 IP 추출용
+            HttpServletRequest httpRequest) {
 
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("인증 정보가 없습니다.");
@@ -47,15 +40,13 @@ public class ReservationController {
 
         Long userId = (Long) authentication.getPrincipal();
 
-        // ── 🌟 Step 1: GraphSAGE 봇 탐지 ──────────────────
+        // ── Step 1: GraphSAGE 봇 탐지 ──────────────────
         String clientIp = getClientIp(httpRequest);
         String userAgent = httpRequest.getHeader("User-Agent");
 
-        // 유저 취소/성공 횟수 조회 (간단히 DB에서)
-        int cancelCount = reservationRepository
-                .countByUserIdAndStatus(userId, com.ticketing.server.domain.ReservationStatus.CANCELLED);
-        int successCount = reservationRepository
-                .countByUserIdAndStatus(userId, com.ticketing.server.domain.ReservationStatus.CONFIRMED);
+        // 유저 취소/성공 횟수 조회는 Service 계층 위임
+        int cancelCount = reservationService.countCancelledByUser(userId);
+        int successCount = reservationService.countConfirmedByUser(userId);
 
         BotDetectionRequest botRequest = BotDetectionRequest.builder()
                 .userId(userId)
