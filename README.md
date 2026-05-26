@@ -86,10 +86,25 @@ docker-compose up -d
 
 MySQL(3306), Redis(6379), Prometheus(9090), Grafana(3000) 컨테이너가 실행됩니다.
 
-### 3. Spring Boot 실행
+### 3. 개발 환경 실행
 
 IntelliJ에서 `TicketingServerApplication` 실행
 (Run Configuration → Environment Variables에 `.env` 파일 연결)
+
+### 4. 프로덕션 빌드 및 실행 (배포)
+
+```bash
+# 빌드
+gradlew.bat build -x test
+
+# 8080 포트 실행
+java -jar build\libs\ticketing-server-0.0.1-SNAPSHOT.jar --server.port=8080 --kopis.api-key=키값
+
+# 8081 포트 실행 (로드밸런싱용, 새 터미널에서)
+java -jar build\libs\ticketing-server-0.0.1-SNAPSHOT.jar --server.port=8081 --kopis.api-key=키값
+```
+
+> AI 서버(uvicorn 4개)를 먼저 실행한 후 백엔드를 기동하는 것을 권장합니다.
 
 ---
 
@@ -120,8 +135,15 @@ http://localhost:8080/swagger-ui/index.html
 [Client]
     │
     ▼
-[Spring Boot :8080]  ←──→  [MySQL :3306]
-                     ←──→  [Redis :6379]
+[Cloudflare Tunnel]
+    │
+    ▼
+[Nginx :80] ── 로드밸런싱 ──→ [Spring Boot :8080]
+                           └─→ [Spring Boot :8081]
+                                    │
+                         ┌──────────┴──────────┐
+                         ▼                     ▼
+                   [MySQL :3306]         [Redis :6379]
 
 [Prometheus :9090] ←── scrape ── [Spring Boot Actuator]
 [Grafana :3000]    ←── query  ── [Prometheus]
